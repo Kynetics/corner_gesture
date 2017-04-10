@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/CournerTouchGesture.iml" filepath="$PROJECT_DIR$/CournerTouchGesture.iml" />
+      <module fileurl="file://$PROJECT_DIR$/corner-gesture/corner-gesture.iml" filepath="$PROJECT_DIR$/corner-gesture/corner-gesture.iml" />
+    </modules>
+  </component>
+</project>
