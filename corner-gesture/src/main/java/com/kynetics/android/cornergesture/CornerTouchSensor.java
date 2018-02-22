@@ -2,6 +2,7 @@ package com.kynetics.android.cornergesture;
 
 import android.content.Context;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 
@@ -22,6 +23,7 @@ import static android.view.MotionEvent.ACTION_UP;
  */
 public class CornerTouchSensor extends GestureDetector.SimpleOnGestureListener {
 
+    private static final String TAG = CornerTouchSensor.class.getSimpleName();
     public interface CornerTouchSequenceListener {
         void cornerTouchSequenceInserted(String sequence);
     }
@@ -130,6 +132,10 @@ public class CornerTouchSensor extends GestureDetector.SimpleOnGestureListener {
         }
         final int action = motionEvent.getActionMasked();
         this.corner = findCorner((int) motionEvent.getX(), (int) motionEvent.getY());
+        if(corner == null){
+            armed = false;
+            resetCurrentCornerSequence();
+        }
         if(action == ACTION_DOWN && this.corner != null) {
             this.armed = true;
         }
@@ -149,8 +155,7 @@ public class CornerTouchSensor extends GestureDetector.SimpleOnGestureListener {
             resetTask.start();
             onCornerPressed(corner);
         } else {
-            currentCornerSequence = "";
-            resetTask.stop();
+            resetCurrentCornerSequence();
         }
         return true;
     }
@@ -172,7 +177,7 @@ public class CornerTouchSensor extends GestureDetector.SimpleOnGestureListener {
         this.resetTask = TimeoutTask.newInstance(timeout, new Runnable() {
             @Override
             public void run() {
-                currentCornerSequence = "";
+                resetCurrentCornerSequence();
             }
         });
         this.cornerSize = size;
@@ -184,23 +189,23 @@ public class CornerTouchSensor extends GestureDetector.SimpleOnGestureListener {
 
     private void onCornerPressed(String corner) {
         resetTask.start();
+        resetTask.delay();
+        if(!currentCornerSequenceMayBeCorrect){
+            Log.d(TAG, String.format("Don't increment uncorrect sequence [%s]",currentCornerSequence));
+            return;
+        }
+        Log.d(TAG, String.format("Increment corner sequence [%s] + %s",currentCornerSequence, corner));
         currentCornerSequence += corner;
-        boolean canMatch = false;
+        boolean anySequenceCanMatch = false;
         for(String sequence : sequences) {
+            anySequenceCanMatch |= sequence.startsWith(currentCornerSequence);
             if(sequence.equals(currentCornerSequence)) {
                 listener.cornerTouchSequenceInserted(sequence);
-                currentCornerSequence = "";
-                resetTask.stop();
-                break;
-            } else if(sequence.startsWith(currentCornerSequence)) {
-                canMatch = true;
-                resetTask.delay();
+                resetCurrentCornerSequence();
                 break;
             }
         }
-        if(!canMatch) {
-            currentCornerSequence = "";
-        }
+        currentCornerSequenceMayBeCorrect = anySequenceCanMatch;
     }
 
     private String findCorner(int x, int y) {
@@ -211,7 +216,18 @@ public class CornerTouchSensor extends GestureDetector.SimpleOnGestureListener {
         return null;
     }
 
+    private void resetCurrentCornerSequence() {
+        if(!currentCornerSequence.isEmpty()){
+            Log.d(TAG, "clear current corner sequence");
+            currentCornerSequence = "";
+            currentCornerSequenceMayBeCorrect = true;
+            resetTask.stop();
+        }
+    }
+
     private String currentCornerSequence = "";
+
+    private boolean currentCornerSequenceMayBeCorrect = true;
 
     private boolean enabled = true;
 
